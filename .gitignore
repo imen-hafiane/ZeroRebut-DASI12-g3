@@ -1,7 +1,11 @@
 target/
 node_modules/
 dist/
+.angular/
 .idea/
 .vscode/
 *.iml
 .env
+*.log
+HELP.md
+.mvn/wrapper/maven-wrapper.jar

@@ -1,0 +1,7 @@
+# À placer dans Backend/ms-XXX/src/main/resources/application.yml
+# Port, base de données et Eureka viennent de config-server (config/ms-XXX.yml)
+spring:
+  application:
+    name: ms-XXX
+  config:
+    import: configserver:http://${CONFIG_HOST:localhost}:8888

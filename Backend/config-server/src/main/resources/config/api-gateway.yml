@@ -1,0 +1,44 @@
+# API Gateway : point d'entrée unique (http://localhost:8080)
+server:
+  port: 8080
+
+spring:
+  cloud:
+    gateway:
+      # Chaque membre met à jour SA route si ses chemins changent
+      routes:
+        - id: ms-stocks
+          uri: lb://ms-stocks
+          predicates:
+            - Path=/api/produits/**,/api/lots/**
+        - id: ms-offres
+          uri: lb://ms-offres
+          predicates:
+            - Path=/api/offres/**,/api/paniers/**,/api/categories/**
+        - id: ms-reservations
+          uri: lb://ms-reservations
+          predicates:
+            - Path=/api/reservations/**,/api/commandes/**
+        - id: ms-dons
+          uri: lb://ms-dons
+          predicates:
+            - Path=/api/dons/**,/api/demandes/**
+        - id: ms-collecte
+          uri: lb://ms-collecte
+          predicates:
+            - Path=/api/creneaux/**,/api/collectes/**
+        - id: ms-signalements
+          uri: lb://ms-signalements
+          predicates:
+            - Path=/api/signalements/**,/api/traitements/**
+        - id: ms-notifications
+          uri: lb://ms-notifications
+          predicates:
+            - Path=/api/notifications/**,/api/historique/**
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins: "http://localhost:4200"
+            allowed-methods: "*"
+            allowed-headers: "*"
+            allow-credentials: true
