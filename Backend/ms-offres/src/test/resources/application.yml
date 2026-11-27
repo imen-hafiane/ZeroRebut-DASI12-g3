@@ -1,4 +1,3 @@
-# À placer dans Backend/ms-offres/src/test/resources/application.yml
 # Les tests tournent sans config-server, sans Eureka et sur H2
 spring:
   application:
@@ -18,3 +17,7 @@ spring:
 eureka:
   client:
     enabled: false
+
+offres:
+  expiration:
+    intervalle-ms: 3600000
