@@ -8,8 +8,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.view.RedirectView;
 import tn.esprit.zerorebut.stock.domain.CategorieProduit;
 import tn.esprit.zerorebut.stock.domain.StatutArticle;
 import tn.esprit.zerorebut.stock.dto.*;
@@ -25,11 +27,17 @@ public class StockController {
 
     private final IStockService stockService;
 
-    @GetMapping
+    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Lister tous les articles en stock", description = "Retourne l'ensemble des articles gérés dans le système")
     @ApiResponse(responseCode = "200", description = "Liste retournée avec succès")
     public ResponseEntity<List<ArticleStockResponseDTO>> findAll() {
         return ResponseEntity.ok(stockService.findAll());
+    }
+
+    @GetMapping(produces = MediaType.TEXT_HTML_VALUE)
+    @Operation(hidden = true)
+    public RedirectView viewHtml() {
+        return new RedirectView("/");
     }
 
     @GetMapping("/{id}")
