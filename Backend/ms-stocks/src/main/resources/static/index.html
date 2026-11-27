@@ -601,15 +601,15 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Quantité disponible *</label>
-                        <input type="number" id="quantiteDisponible" class="form-input" required value="20" min="0" step="0.5">
+                        <input type="number" id="quantiteDisponible" class="form-input" required value="20" min="0" step="any">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Seuil d'alerte *</label>
-                        <input type="number" id="quantiteAlerte" class="form-input" required value="5" min="0" step="0.5">
+                        <input type="number" id="quantiteAlerte" class="form-input" required value="5" min="0" step="any">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Prix original (DT) *</label>
-                        <input type="number" id="prixOriginal" class="form-input" required value="1.50" min="0" step="0.10">
+                        <input type="number" id="prixOriginal" class="form-input" required value="1.50" min="0.01" step="any">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Date de péremption (DLC) *</label>
@@ -761,34 +761,93 @@
         function openAddModal() { document.getElementById('addModal').style.display = 'flex'; }
         function closeAddModal() { document.getElementById('addModal').style.display = 'none'; }
 
+        function parseNumberInput(val) {
+            if (val === undefined || val === null || val === '') return null;
+            if (typeof val === 'string') {
+                val = val.replace(',', '.').trim();
+            }
+            const num = parseFloat(val);
+            return isNaN(num) ? null : num;
+        }
+
         async function submitArticle(e) {
             e.preventDefault();
-            const payload = {
-                nom: document.getElementById('nom').value,
-                codeBarre: document.getElementById('codeBarre').value || "3560070891000",
-                categorie: document.getElementById('categorie').value,
-                unite: "PIECE",
-                quantiteDisponible: parseFloat(document.getElementById('quantiteDisponible').value),
-                quantiteAlerte: parseFloat(document.getElementById('quantiteAlerte').value),
-                prixOriginal: parseFloat(document.getElementById('prixOriginal').value),
-                datePeremption: document.getElementById('datePeremption').value,
-                statut: "DISPONIBLE",
-                idCommercant: 101,
-                nomMagasin: document.getElementById('nomMagasin').value,
-                rayonStockage: document.getElementById('rayonStockage').value
-            };
+            try {
+                const prixVal = parseNumberInput(document.getElementById('prixOriginal').value);
+                const qteVal = parseNumberInput(document.getElementById('quantiteDisponible').value);
+                const alerteVal = parseNumberInput(document.getElementById('quantiteAlerte').value);
 
-            const res = await fetch('/api/v1/stocks', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+                if (prixVal === null || prixVal <= 0) {
+                    alert("Veuillez saisir un prix valide supérieur à 0 (ex: 1.50).");
+                    return;
+                }
+                if (qteVal === null || qteVal < 0) {
+                    alert("Veuillez saisir une quantité disponible valide (>= 0).");
+                    return;
+                }
+                if (alerteVal === null || alerteVal < 0) {
+                    alert("Veuillez saisir un seuil d'alerte valide (>= 0).");
+                    return;
+                }
 
-            if (res.ok) {
-                closeAddModal();
-                fetchArticles();
-            } else {
-                alert("Erreur lors de la création de l'article");
+                let dlcVal = document.getElementById('datePeremption').value;
+                if (dlcVal && dlcVal.includes('/')) {
+                    const parts = dlcVal.split('/');
+                    if (parts.length === 3) {
+                        dlcVal = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                    }
+                }
+
+                const payload = {
+                    nom: document.getElementById('nom').value.trim(),
+                    codeBarre: document.getElementById('codeBarre').value.trim() || "3560070891000",
+                    categorie: document.getElementById('categorie').value,
+                    unite: "PIECE",
+                    quantiteDisponible: qteVal,
+                    quantiteAlerte: alerteVal,
+                    prixOriginal: prixVal,
+                    datePeremption: dlcVal,
+                    statut: "DISPONIBLE",
+                    idCommercant: 101,
+                    nomMagasin: document.getElementById('nomMagasin').value.trim(),
+                    rayonStockage: document.getElementById('rayonStockage').value.trim()
+                };
+
+                const res = await fetch('/api/v1/stocks', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    closeAddModal();
+                    document.getElementById('addArticleForm').reset();
+                    // Réinitialiser la date par défaut à J+3
+                    const defDate = new Date();
+                    defDate.setDate(defDate.getDate() + 3);
+                    document.getElementById('datePeremption').value = defDate.toISOString().split('T')[0];
+                    fetchArticles();
+                    alert("Article ajouté avec succès !");
+                } else {
+                    let errMessage = "Erreur lors de la création de l'article";
+                    try {
+                        const errData = await res.json();
+                        if (errData.errors) {
+                            errMessage += " :\n" + Object.entries(errData.errors).map(([k, v]) => `• ${k}: ${v}`).join("\n");
+                        } else if (errData.detail) {
+                            errMessage += " : " + errData.detail;
+                        } else if (errData.message) {
+                            errMessage += " : " + errData.message;
+                        }
+                    } catch (_) {}
+                    alert(errMessage);
+                }
+            } catch (err) {
+                console.error("Erreur d'envoi :", err);
+                alert("Impossible de contacter le serveur (MS-Stocks). Vérifiez que le microservice est bien démarré sur le port 8081.");
             }
         }
 
