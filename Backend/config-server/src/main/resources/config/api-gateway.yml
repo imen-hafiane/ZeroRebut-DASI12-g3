@@ -10,7 +10,7 @@ spring:
         - id: ms-stocks
           uri: lb://ms-stocks
           predicates:
-            - Path=/api/produits/**,/api/lots/**
+            - Path=/api/produits/**,/api/lots/**,/api/v1/stocks/**,/api/stocks/**
         - id: ms-offres
           uri: lb://ms-offres
           predicates:

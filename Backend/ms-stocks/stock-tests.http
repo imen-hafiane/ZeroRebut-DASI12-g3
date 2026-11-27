@@ -1,0 +1,170 @@
+### ===================================================================
+### ZeroRebut - Tests API REST MS1 : Gestion des Stocks (CoolRequest / IntelliJ)
+### Port : 8081 | Base de données : MySQL / H2
+### ===================================================================
+
+@baseUrl = http://localhost:8081/api/v1/stocks
+@actuatorUrl = http://localhost:8081/actuator
+@eurekaUrl = http://localhost:8761
+
+### -------------------------------------------------------------------
+### 1. HEALTH & OBSERVABILITÉ ACTUATOR (Chapitre 3)
+### -------------------------------------------------------------------
+
+### 1.1 Santé de l'application & métriques métier anti-gaspillage
+GET {{actuatorUrl}}/health
+Accept: application/json
+
+### 1.2 Métadonnées du service
+GET {{actuatorUrl}}/info
+Accept: application/json
+
+### 1.3 Liste des routes HTTP exposées
+GET {{actuatorUrl}}/mappings
+Accept: application/json
+
+### -------------------------------------------------------------------
+### 2. GESTION DES ARTICLES EN STOCK (CRUD)
+### -------------------------------------------------------------------
+
+### 2.1 Lister tous les articles
+GET {{baseUrl}}
+Accept: application/json
+
+### 2.2 Créer un article en stock (Pain au chocolat - Boulangerie)
+POST {{baseUrl}}
+Content-Type: application/json
+
+{
+  "nom": "Pain au chocolat pur beurre",
+  "codeBarre": "3560070891001",
+  "description": "Lot de 5 viennoiseries fraîches cuites ce matin",
+  "categorie": "BOULANGERIE_PATISSERIE",
+  "unite": "PIECE",
+  "quantiteDisponible": 25.0,
+  "quantiteAlerte": 5.0,
+  "prixOriginal": 1.20,
+  "dateFabrication": "2026-11-20",
+  "datePeremption": "2026-11-22",
+  "statut": "DISPONIBLE",
+  "idCommercant": 101,
+  "nomMagasin": "Boulangerie Le Bon Pain",
+  "rayonStockage": "Rayon Viennoiseries"
+}
+
+### 2.3 Créer un article proche de la péremption (Produit laitier)
+POST {{baseUrl}}
+Content-Type: application/json
+
+{
+  "nom": "Pack Yaourts Fraise Bio x8",
+  "codeBarre": "3560070892002",
+  "description": "Yaourts au lait entier arôme naturel fraise",
+  "categorie": "PRODUITS_LAITIERS",
+  "unite": "PACK",
+  "quantiteDisponible": 12.0,
+  "quantiteAlerte": 3.0,
+  "prixOriginal": 4.80,
+  "dateFabrication": "2026-11-10",
+  "datePeremption": "2026-11-21",
+  "statut": "PROCHE_PEREMPTION",
+  "idCommercant": 101,
+  "nomMagasin": "Boulangerie Le Bon Pain",
+  "rayonStockage": "Chambre froide"
+}
+
+### 2.4 Consulter un article par ID
+GET {{baseUrl}}/1
+Accept: application/json
+
+### 2.5 Modifier un article (mise à jour quantité et prix)
+PUT {{baseUrl}}/1
+Content-Type: application/json
+
+{
+  "nom": "Pain au chocolat pur beurre",
+  "codeBarre": "3560070891001",
+  "description": "Lot de 5 viennoiseries fraîches cuites ce matin",
+  "categorie": "BOULANGERIE_PATISSERIE",
+  "unite": "PIECE",
+  "quantiteDisponible": 18.0,
+  "quantiteAlerte": 5.0,
+  "prixOriginal": 1.10,
+  "dateFabrication": "2026-11-20",
+  "datePeremption": "2026-11-22",
+  "statut": "DISPONIBLE",
+  "idCommercant": 101,
+  "nomMagasin": "Boulangerie Le Bon Pain",
+  "rayonStockage": "Rayon Viennoiseries"
+}
+
+### -------------------------------------------------------------------
+### 3. DÉTECTION ANTI-GASPILLAGE & DASHBOARDS
+### -------------------------------------------------------------------
+
+### 3.1 Détecter les articles proches de la péremption (DLC dans <= 3 jours)
+GET {{baseUrl}}/commercant/101/alertes-peremption?jours=3
+Accept: application/json
+
+### 3.2 Détecter les articles en seuil critique de quantité
+GET {{baseUrl}}/commercant/101/seuil-critique
+Accept: application/json
+
+### 3.3 Synthèse complète du tableau de bord anti-gaspillage
+GET {{baseUrl}}/commercant/101/synthese?jours=3
+Accept: application/json
+
+### -------------------------------------------------------------------
+### 4. OPÉRATIONS INTER-MICROSERVICES (MS2-OFFRES & MS4-DONS)
+### -------------------------------------------------------------------
+
+### 4.1 Réserver du stock pour constituer une offre panier anti-gaspi (MS2)
+POST {{baseUrl}}/1/reserver-offre
+Content-Type: application/json
+
+{
+  "quantite": 5.0,
+  "referenceExterne": "OFFRE-PANIER-001",
+  "motif": "Constitution du Panier Surprise viennoiseries du soir",
+  "auteur": "ms-offres"
+}
+
+### 4.2 Réserver du stock pour un don alimentaire aux associations (MS4)
+POST {{baseUrl}}/2/reserver-don
+Content-Type: application/json
+
+{
+  "quantite": 4.0,
+  "referenceExterne": "DON-ASSO-012",
+  "motif": "Don au Croissant Rouge",
+  "auteur": "ms-dons"
+}
+
+### 4.3 Libérer du stock réservé suite à annulation
+POST {{baseUrl}}/1/liberer?quantite=2.0&motif=Annulation+panier+non+retire
+Accept: application/json
+
+### 4.4 Mettre au rebut un produit impropre
+POST {{baseUrl}}/2/rebuter?motif=Emballage+abime+DLC+depassee
+Accept: application/json
+
+### 4.5 Consulter l'historique complet des mouvements d'un article
+GET {{baseUrl}}/1/mouvements
+Accept: application/json
+
+### -------------------------------------------------------------------
+### 5. CAS D'ERREURS & VALIDATION (Codes 400, 404)
+### -------------------------------------------------------------------
+
+### 5.1 Article invalide (Validation DTO -> 400 Bad Request)
+POST {{baseUrl}}
+Content-Type: application/json
+
+{
+  "nom": "",
+  "prixOriginal": -5.0
+}
+
+### 5.2 Article introuvable -> 404 Not Found
+GET {{baseUrl}}/99999
+Accept: application/json

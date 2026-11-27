@@ -1,0 +1,69 @@
+# Microservice 1 : ms-stocks
+# Port, base de données MySQL et configuration Eureka proviennent de config-server (config/ms-stocks.yml & config/application.yml)
+spring:
+  application:
+    name: ms-stocks
+  config:
+    import: "optional:configserver:http://${CONFIG_HOST:localhost}:8888"
+
+# Valeurs par défaut en mode autonome (si config-server n'est pas encore lancé)
+server:
+  port: 8081
+  shutdown: graceful
+
+spring.datasource:
+  url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/db_stocks?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+  username: ${MYSQL_USER:root}
+  password: ${MYSQL_PASSWORD:}
+  driver-class-name: com.mysql.cj.jdbc.Driver
+
+spring.jpa:
+  hibernate:
+    ddl-auto: update
+  show-sql: true
+  properties:
+    hibernate:
+      format_sql: true
+
+# Eureka Client (Service Discovery)
+eureka:
+  client:
+    service-url:
+      defaultZone: http://${EUREKA_HOST:localhost}:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${random.value}
+    lease-renewal-interval-in-seconds: 30
+    lease-expiration-duration-in-seconds: 90
+    metadata-map:
+      version: "1.0.0"
+      description: "Microservice Gestion de Stock ZeroRebut"
+
+# Actuator & Observabilité
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env,beans,mappings
+  endpoint:
+    health:
+      show-details: always
+  info:
+    env:
+      enabled: true
+
+# Métadonnées Actuator Info
+info:
+  app:
+    name: "ms-stocks"
+    description: "ZeroRebut - Microservice de Gestion des Stocks et Anti-Gaspillage"
+    version: "1.0.0"
+
+# Swagger / OpenAPI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
