@@ -1,0 +1,97 @@
+### Scénario complet MS2 · Offres (extension VS Code "REST Client")
+#@base = http://localhost:8082
+# Via la gateway : 
+@base = http://localhost:8080
+
+### 1. Créer une catégorie
+POST {{base}}/api/categories
+Content-Type: application/json
+
+{
+  "nom": "Boulangerie",
+  "description": "Pain, viennoiseries et pâtisseries du jour"
+}
+
+### 2. Lister les catégories
+GET {{base}}/api/categories
+
+### 3. Créer une offre en brouillon (idProduit = id d'un article de MS1)
+POST {{base}}/api/offres
+Content-Type: application/json
+
+{
+  "idCommercant": "commercant-001",
+  "titre": "Panier surprise boulangerie",
+  "description": "Invendus du jour, à récupérer avant la fermeture",
+  "prixInitial": 12.000,
+  "prixReduit": 4.000,
+  "dateExpiration": "2026-12-31T20:00:00",
+  "panier": {
+    "nom": "Panier viennoiseries",
+    "description": "3 croissants, 2 pains au chocolat, 1 baguette",
+    "quantite": 5,
+    "idCategorie": 1,
+    "lignes": [
+      { "idProduit": 1, "quantite": 3 },
+      { "idProduit": 2, "quantite": 2 }
+    ]
+  }
+}
+
+### 4. Ajouter un produit au panier (brouillon uniquement)
+POST {{base}}/api/offres/1/panier/lignes
+Content-Type: application/json
+
+{ "idProduit": 3, "quantite": 1 }
+
+### 5. Publier l'offre -> DISPONIBLE, quantiteDisponible = 5
+PUT {{base}}/api/offres/1/publier
+
+### 6. Rechercher les offres disponibles de la catégorie 1 à moins de 5 DT
+GET {{base}}/api/offres?statut=DISPONIBLE&categorie=1&prixMax=5
+
+### 7. MS3 vérifie la disponibilité de 2 paniers
+GET {{base}}/api/offres/1/disponibilite?quantite=2
+
+### 8. MS3 réserve 2 paniers -> reste 3
+PUT {{base}}/api/offres/1/reserver
+Content-Type: application/json
+
+{ "quantite": 2 }
+
+### 9. Réserver 10 paniers -> 409 (quantité insuffisante)
+PUT {{base}}/api/offres/1/reserver
+Content-Type: application/json
+
+{ "quantite": 10 }
+
+### 10. MS3 libère 1 panier (annulation) -> reste 4
+PUT {{base}}/api/offres/1/liberer
+Content-Type: application/json
+
+{ "quantite": 1 }
+
+### 11. Suspendre puis republier
+PUT {{base}}/api/offres/1/suspendre
+
+###
+PUT {{base}}/api/offres/1/publier
+
+### 12. Erreur de validation -> 400 (prix réduit > prix initial)
+POST {{base}}/api/offres
+Content-Type: application/json
+
+{
+  "idCommercant": "commercant-001",
+  "titre": "Offre invalide",
+  "prixInitial": 5,
+  "prixReduit": 8,
+  "dateExpiration": "2026-12-31T20:00:00",
+  "panier": { "nom": "x", "quantite": 1, "idCategorie": 1, "lignes": [] }
+}
+
+### 13. Offre inexistante -> 404
+GET {{base}}/api/offres/999
+
+### 14. Désactiver -> ANNULEE
+PUT {{base}}/api/offres/1/desactiver
